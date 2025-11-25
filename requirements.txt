@@ -1,0 +1,12 @@
+fastapi[standard]
+python-dotenv
+# Base de données
+sqlalchemy
+psycopg2-binary  # Driver PostgreSQL
+# Sécurité
+passlib[bcrypt]  # Hachage des mots de passe
+python-jose[cryptography] # JWT
+# Requêtes HTTP asynchrones
+httpx
+
+requests
