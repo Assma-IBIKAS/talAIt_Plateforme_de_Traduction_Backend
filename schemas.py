@@ -5,15 +5,13 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
-class Token(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
-    token_type: str = 'bearer'
-
+    token_type: str = "bearer"
 
 class TranslateRequest(BaseModel):
     text: str
-    direction: str # 'fr-en' or 'en-fr'
-
+    direction: str  # "fr-en" or "en-fr"
 
 class TranslateResponse(BaseModel):
     translation: str
