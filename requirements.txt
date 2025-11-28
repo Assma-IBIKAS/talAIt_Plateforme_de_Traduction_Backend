@@ -9,4 +9,7 @@ python-jose[cryptography] # JWT
 # Requêtes HTTP asynchrones
 httpx
 
+pytest
 requests
+# pytest --html=rapport.html
+pytest-html
