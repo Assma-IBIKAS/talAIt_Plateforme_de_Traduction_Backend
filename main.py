@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+from schemas import *
 
 from db import get_db, Base, engine  
 from models import User  
@@ -16,6 +17,9 @@ from models import User
 
 from dotenv import load_dotenv
 load_dotenv()
+
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # ---------- Config JWT ----------
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")  
@@ -29,24 +33,20 @@ HF_TIMEOUT = int(os.getenv("HF_TIMEOUT_SECONDS","60"))
 # ---------- FastAPI app ----------
 app = FastAPI(title="talAIt Platforme Translate")
 
-# IMPORTANT: import des modèles / Base avant create_all
+# import des modèles / Base avant create_all
 Base.metadata.create_all(bind=engine) 
 
-# ---------- Pydantic schemas ----------
-class UserCreate(BaseModel):
-    username: str
-    password: str
+origins = [
+    "http://localhost:3000",   
+]
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-
-class TranslateRequest(BaseModel):
-    text: str
-    direction: str  # "fr-en" or "en-fr"
-
-class TranslateResponse(BaseModel):
-    translation: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------- Helpers for password & JWT ----------
 def get_password_hash(password: str) -> str:
@@ -132,30 +132,30 @@ def translate_endpoint(
     request: Request = None,
 ):
     """Endpoint protégé : appelle Hugging Face (hf_translate) et retourne la traduction."""
-    # 1) validation d'entrée
+    # validation d'entrée
     if not req.text or req.direction not in ("fr-en", "en-fr"):
         raise HTTPException(status_code=400, detail="Format d'entrée invalide (text & direction attendus).")
 
-    # (optionnel) log simple
+    # log simple
     # print(f"[translate] user={username} direction={req.direction} len_text={len(req.text)}")
 
-    # 2) appeler hugging_face (fonction synchrone)
+    # appeler hugging_face (fonction synchrone)
     try:
         result = hf_translate(req.text, req.direction)
     except Exception as e:
         # protège contre toute exception non prévue dans hf_translate
         raise HTTPException(status_code=502, detail=f"Erreur interne lors de l'appel HF: {e}")
 
-    # 3) gérer erreurs renvoyées par HF
+    # gérer erreurs renvoyées par HF
     if isinstance(result, dict) and result.get("error"):
         # renvoie le message d'erreur HF (502 Bad Gateway)
         raise HTTPException(status_code=502, detail=result.get("error"))
 
-    # 4) extraire la traduction attendue
+    # extraire la traduction attendue
     if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
         translation = result[0].get("translation_text") or result[0].get("generated_text")
         if translation:
             return {"translation": translation}
 
-    # 5) si format inattendu
+    # si format inattendu
     raise HTTPException(status_code=502, detail="Réponse Hugging Face inattendue")
